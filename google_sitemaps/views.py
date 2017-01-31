@@ -3,10 +3,10 @@ from django.shortcuts import render_to_response
 from django.contrib.sites.models import Site
 from django.core import urlresolvers
 from django.template import loader
-from django.utils.encoding import smart_str
 from django.core.paginator import EmptyPage, PageNotAnInteger
 
 from .settings import LANG, NAME, TZ
+
 
 def index(request, sitemaps):
     """
@@ -20,18 +20,18 @@ def index(request, sitemaps):
             pages = site().paginator.num_pages
         else:
             pages = site.paginator.num_pages
-        sitemap_url = urlresolvers.reverse('news_sitemaps_sitemap', kwargs={'section': section})
+        sitemap_url = urlresolvers.reverse('google_sitemaps_sitemap', kwargs={'section': section})
         sites.append('%s://%s%s' % (protocol, current_site.domain, sitemap_url))
         if pages > 1:
             for page in range(2, pages+1):
                 sites.append('%s://%s%s?p=%s' % (protocol, current_site.domain, sitemap_url, page))
-    xml = loader.render_to_string('sitemaps/index.xml', {'sitemaps': sites})
+    xml = loader.render_to_string('google_sitemaps/index.xml', {'sitemaps': sites})
     return HttpResponse(xml, content_type='application/xml')
 
-def news_sitemap(request, sitemaps, section=None):
-    """
-    A view for creating Google News Sitemaps
-    Optional section will filter down to just the passed section name
+
+def google_sitemap(request, sitemaps, section=None):
+    """ A view for creating Google Sitemaps, type casts to determine which XML layout to use depending on if it's
+    News or Video
     """
     maps, urls = [], []
     if section is not None:
@@ -52,7 +52,12 @@ def news_sitemap(request, sitemaps, section=None):
         except PageNotAnInteger:
             raise Http404('No page "%s"' % page)
 
-    return render_to_response('sitemaps/news_sitemap.xml', {
+    response = {
+        'News': 'google_sitemaps/news_sitemap.xml',
+        'Video': 'google_sitemaps/videos_sitemap.xml',
+    }
+
+    return render_to_response(response[site.Type], {
         'urlset': urls,
         'publication_name': NAME,
         'publication_lang': LANG,
